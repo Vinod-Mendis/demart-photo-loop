@@ -5,9 +5,14 @@
 import React, { useEffect, useRef, useState } from "react";
 
 // GSAP-like animation function (simplified for this environment)
-const animateElement = (element, fromProps, toProps, duration = 800) => {
+const animateElement = (
+  element: HTMLElement,
+  fromProps: Record<string, number>,
+  toProps: Record<string, number | (() => void)>,
+  duration = 800
+) => {
   const startTime = performance.now();
-  const startProps = {};
+  const startProps: Record<string, number> = {};
 
   // Get initial values
   Object.keys(toProps).forEach((key) => {
@@ -26,7 +31,7 @@ const animateElement = (element, fromProps, toProps, duration = 800) => {
     }
   });
 
-  const animate = (currentTime) => {
+  const animate = (currentTime: number) => {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
 
@@ -36,7 +41,7 @@ const animateElement = (element, fromProps, toProps, duration = 800) => {
     let transform = "";
     Object.keys(toProps).forEach((key) => {
       const start = startProps[key] || (key === "scale" ? 1 : 0);
-      const end = toProps[key];
+      const end = toProps[key] as number;
       const current = start + (end - start) * easeOut;
 
       if (key === "x") {
@@ -57,19 +62,25 @@ const animateElement = (element, fromProps, toProps, duration = 800) => {
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else if (toProps.onComplete) {
-      setTimeout(toProps.onComplete, 0);
+      setTimeout(toProps.onComplete as () => void, 0);
     }
   };
 
   requestAnimationFrame(animate);
 };
+interface Participant {
+  id: number;
+  name: string;
+  imageUrl: string;
+}
 
 const PhotoLoopApp = () => {
-  const [participants, setParticipants] = useState([]);
+  const [participants, setParticipants] = useState<Participant[]>([]);
   const [isAnimating, setIsAnimating] = useState(false);
   const [nextAnimationIn, setNextAnimationIn] = useState(3);
-  const containerRef = useRef(null);
-  const centerRef = useRef(null);
+  // Ref declarations
+  const containerRef = useRef<HTMLDivElement>(null);
+  const centerRef = useRef<HTMLDivElement>(null);
 
   // Generate 100 participants with placeholder images
   useEffect(() => {
@@ -101,7 +112,7 @@ const PhotoLoopApp = () => {
   }, [isAnimating]);
 
   // Animation function
-  const animateImage = (imageElement, side) => {
+  const animateImage = (imageElement: HTMLElement | null, side: string) => {
     if (
       isAnimating ||
       !imageElement ||
