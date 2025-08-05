@@ -1,103 +1,296 @@
-import Image from "next/image";
+/** @format */
 
-export default function Home() {
+"use client";
+
+import React, { useEffect, useRef, useState } from "react";
+
+// GSAP-like animation function (simplified for this environment)
+const animateElement = (element, fromProps, toProps, duration = 800) => {
+  const startTime = performance.now();
+  const startProps = {};
+
+  // Get initial values
+  Object.keys(toProps).forEach((key) => {
+    if (key === "x" || key === "y") {
+      startProps[key] = parseFloat(
+        element.style.transform?.match(
+          new RegExp(`translate${key.toUpperCase()}\\(([^)]+)\\)`)
+        )?.[1] || "0"
+      );
+    } else if (key === "scale") {
+      startProps[key] = parseFloat(
+        element.style.transform?.match(/scale\(([^)]+)\)/)?.[1] || "1"
+      );
+    } else if (key === "zIndex") {
+      startProps[key] = parseInt(element.style.zIndex || "1");
+    }
+  });
+
+  const animate = (currentTime) => {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // Easing function (ease-out)
+    const easeOut = 1 - Math.pow(1 - progress, 3);
+
+    let transform = "";
+    Object.keys(toProps).forEach((key) => {
+      const start = startProps[key] || (key === "scale" ? 1 : 0);
+      const end = toProps[key];
+      const current = start + (end - start) * easeOut;
+
+      if (key === "x") {
+        transform += `translateX(${current}px) `;
+      } else if (key === "y") {
+        transform += `translateY(${current}px) `;
+      } else if (key === "scale") {
+        transform += `scale(${current}) `;
+      } else if (key === "zIndex") {
+        element.style.zIndex = Math.round(current).toString();
+      }
+    });
+
+    if (transform) {
+      element.style.transform = transform.trim();
+    }
+
+    if (progress < 1) {
+      requestAnimationFrame(animate);
+    } else if (toProps.onComplete) {
+      setTimeout(toProps.onComplete, 0);
+    }
+  };
+
+  requestAnimationFrame(animate);
+};
+
+const PhotoLoopApp = () => {
+  const [participants, setParticipants] = useState([]);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [nextAnimationIn, setNextAnimationIn] = useState(3);
+  const containerRef = useRef(null);
+  const centerRef = useRef(null);
+
+  // Generate 100 participants with placeholder images
+  useEffect(() => {
+    const generateParticipants = () => {
+      return Array.from({ length: 100 }, (_, index) => ({
+        id: index + 1,
+        name: `Person ${index + 1}`,
+        imageUrl: `https://picsum.photos/150/150?random=${index + 1}`,
+      }));
+    };
+
+    setParticipants(generateParticipants());
+  }, []);
+
+  // Countdown timer
+  useEffect(() => {
+    if (isAnimating) return;
+
+    const timer = setInterval(() => {
+      setNextAnimationIn((prev) => {
+        if (prev <= 1) {
+          return 3;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isAnimating]);
+
+  // Animation function
+  const animateImage = (imageElement, side) => {
+    if (
+      isAnimating ||
+      !imageElement ||
+      !containerRef.current ||
+      !centerRef.current
+    )
+      return;
+
+    setIsAnimating(true);
+
+    // Get positions
+    const imageRect = imageElement.getBoundingClientRect();
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const centerRect = centerRef.current.getBoundingClientRect();
+
+    // Calculate center position relative to image's current position
+    const centerX =
+      centerRect.left +
+      centerRect.width / 2 -
+      (imageRect.left + imageRect.width / 2);
+    const centerY =
+      centerRect.top +
+      centerRect.height / 2 -
+      (imageRect.top + imageRect.height / 2);
+
+    // Reset any existing transforms
+    imageElement.style.transform = "";
+
+    // Animate to center
+    animateElement(
+      imageElement,
+      {},
+      {
+        x: centerX,
+        y: centerY,
+        scale: 2.5,
+        zIndex: 1000,
+        onComplete: () => {
+          // Hold for 1 second, then animate back
+          setTimeout(() => {
+            animateElement(
+              imageElement,
+              {},
+              {
+                x: 0,
+                y: 0,
+                scale: 1,
+                zIndex: 1,
+                onComplete: () => {
+                  setIsAnimating(false);
+                  setNextAnimationIn(3);
+                },
+              }
+            );
+          }, 1000);
+        },
+      }
+    );
+  };
+
+  // Start random animation loop
+  useEffect(() => {
+    if (participants.length === 0 || isAnimating) return;
+
+    const startRandomAnimation = () => {
+      if (isAnimating) return;
+
+      // Choose random side (first 10 from each side)
+      const side = Math.random() < 0.5 ? "left" : "right";
+      const imageIndex = Math.floor(Math.random() * 10);
+
+      const imageId =
+        side === "left" ? `img-${imageIndex}` : `img-${imageIndex + 10}`;
+      const imageElement = document.getElementById(imageId);
+
+      if (imageElement) {
+        animateImage(imageElement, side);
+      }
+    };
+
+    // Start animation when countdown reaches 0
+    if (nextAnimationIn === 1) {
+      setTimeout(startRandomAnimation, 1000);
+    }
+  }, [participants, isAnimating, nextAnimationIn]);
+
+  if (participants.length === 0) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-gray-900">
+        <div className="text-white text-xl">Loading participants...</div>
+      </div>
+    );
+  }
+
+  const leftSideParticipants = participants.slice(0, 10);
+  const rightSideParticipants = participants.slice(10, 20);
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
-
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+    <div
+      ref={containerRef}
+      className="h-screen w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden relative">
+      {/* Left Side - 2 columns with 5 images each */}
+      <div className="absolute left-8 top-1/2 transform -translate-y-1/2">
+        <div className="grid grid-cols-2 gap-4">
+          {leftSideParticipants.map((participant, index) => (
+            <div key={participant.id} className="relative">
+              <img
+                id={`img-${index}`}
+                src={participant.imageUrl}
+                alt={participant.name}
+                className="w-24 h-24 object-cover rounded-lg shadow-lg border-2 border-gray-600 cursor-pointer transition-all duration-200 hover:scale-105"
+                draggable={false}
+                style={{ position: "relative", zIndex: 1 }}
+              />
+              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
+                <span className="text-xs text-gray-300 whitespace-nowrap">
+                  {participant.name}
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      </div>
+
+      {/* Center Area - Animation space */}
+      <div
+        ref={centerRef}
+        className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center">
+        <div className="text-gray-500 text-center">
+          <div className="text-sm">Animation</div>
+          <div className="text-sm">Center</div>
+        </div>
+      </div>
+
+      {/* Right Side - 2 columns with 5 images each */}
+      <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
+        <div className="grid grid-cols-2 gap-4">
+          {rightSideParticipants.map((participant, index) => (
+            <div key={participant.id} className="relative">
+              <img
+                id={`img-${index + 10}`}
+                src={participant.imageUrl}
+                alt={participant.name}
+                className="w-24 h-24 object-cover rounded-lg shadow-lg border-2 border-gray-600 cursor-pointer transition-all duration-200 hover:scale-105"
+                draggable={false}
+                style={{ position: "relative", zIndex: 1 }}
+              />
+              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
+                <span className="text-xs text-gray-300 whitespace-nowrap">
+                  {participant.name}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Status indicator */}
+      <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
+        <div className="bg-black bg-opacity-50 rounded-full px-4 py-2">
+          <span className="text-white text-sm">
+            {isAnimating
+              ? "🎬 Animating..."
+              : `⏱️ Next animation in ${nextAnimationIn}s`}
+          </span>
+        </div>
+      </div>
+
+      {/* Participant counter */}
+      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+        <div className="bg-black bg-opacity-50 rounded-full px-4 py-2">
+          <span className="text-white text-sm">
+            Showing 20 of {participants.length} participants
+          </span>
+        </div>
+      </div>
+
+      {/* Instructions */}
+      <div className="absolute bottom-4 left-4">
+        <div className="bg-black bg-opacity-50 rounded-lg px-3 py-2">
+          <div className="text-white text-xs">
+            <div>• 2 columns × 5 images per side</div>
+            <div>• Random animation every 3 seconds</div>
+            <div>• Images animate to center and back</div>
+          </div>
+        </div>
+      </div>
     </div>
   );
-}
+};
+
+export default PhotoLoopApp;
