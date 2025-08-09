@@ -82,18 +82,145 @@ interface Participant {
   id: number;
   name: string;
   imageUrl: string;
+  shopName: string;
 }
 
 const PhotoLoopApp = () => {
-  const [participants, setParticipants] = useState<Participant[]>([]);
+  // Hardcoded 20 participants array
+  const [participants, setParticipants] = useState<Participant[]>([
+    {
+      id: 1,
+      name: "Alice Johnson",
+      shopName: "Urban Threads Boutique",
+      imageUrl: "https://picsum.photos/150/150?random=1",
+    },
+    {
+      id: 2,
+      name: "Bob Smith",
+      shopName: "The Golden Harvest Market",
+      imageUrl: "https://picsum.photos/150/150?random=2",
+    },
+    {
+      id: 3,
+      name: "Carol Davis",
+      shopName: "Pixel & Paper Creative Studio",
+      imageUrl: "https://picsum.photos/150/150?random=3",
+    },
+    {
+      id: 4,
+      name: "David Wilson",
+      shopName: "Fresh Bloom Floral Designs",
+      imageUrl: "https://picsum.photos/150/150?random=4",
+    },
+    {
+      id: 5,
+      name: "Emma Brown",
+      shopName: "Luxe Lane Fashion & Accessories",
+      imageUrl: "https://picsum.photos/150/150?random=5",
+    },
+    {
+      id: 6,
+      name: "Frank Miller",
+      shopName: "Brew & Bean Café",
+      imageUrl: "https://picsum.photos/150/150?random=6",
+    },
+    {
+      id: 7,
+      name: "Grace Lee",
+      shopName: "GreenLeaf Organics",
+      imageUrl: "https://picsum.photos/150/150?random=7",
+    },
+    {
+      id: 8,
+      name: "Henry Garcia",
+      shopName: "TechNest Gadgets",
+      imageUrl: "https://picsum.photos/150/150?random=8",
+    },
+    {
+      id: 9,
+      name: "Ivy Chen",
+      shopName: "Blissful Bakes",
+      imageUrl: "https://picsum.photos/150/150?random=9",
+    },
+    {
+      id: 10,
+      name: "Jack Taylor",
+      shopName: "Fit & Fab Activewear",
+      imageUrl: "https://picsum.photos/150/150?random=10",
+    },
+    {
+      id: 11,
+      name: "Kate Anderson",
+      shopName: "Coastal Charm Décor",
+      imageUrl: "https://picsum.photos/150/150?random=11",
+    },
+    {
+      id: 12,
+      name: "Liam Thomas",
+      shopName: "BrightPath Books",
+      imageUrl: "https://picsum.photos/150/150?random=12",
+    },
+    {
+      id: 13,
+      name: "Mia Rodriguez",
+      shopName: "Serenity Spa & Wellness",
+      imageUrl: "https://picsum.photos/150/150?random=13",
+    },
+    {
+      id: 14,
+      name: "Noah Martinez",
+      shopName: "Peak Performance Gym",
+      imageUrl: "https://picsum.photos/150/150?random=14",
+    },
+    {
+      id: 15,
+      name: "Olivia White",
+      shopName: "Golden Glow Jewelry",
+      imageUrl: "https://picsum.photos/150/150?random=15",
+    },
+    {
+      id: 16,
+      name: "Peter Clark",
+      shopName: "Vintage Wheels Auto",
+      imageUrl: "https://picsum.photos/150/150?random=16",
+    },
+    {
+      id: 17,
+      name: "Quinn Lewis",
+      shopName: "Summit Outdoor Gear",
+      imageUrl: "https://picsum.photos/150/150?random=17",
+    },
+    {
+      id: 18,
+      name: "Ruby Hall",
+      shopName: "Bloom & Vine Florist",
+      imageUrl: "https://picsum.photos/150/150?random=18",
+    },
+    {
+      id: 19,
+      name: "Sam Young",
+      shopName: "Urban Eats Diner",
+      imageUrl: "https://picsum.photos/150/150?random=19",
+    },
+    {
+      id: 20,
+      name: "Tara King",
+      shopName: "Starlight Boutique",
+      imageUrl: "https://picsum.photos/150/150?random=20",
+    },
+  ]);
+
   const [isAnimating, setIsAnimating] = useState(false);
   const [nextAnimationIn, setNextAnimationIn] = useState(3);
   const [showMenu, setShowMenu] = useState(false);
   const [imagesToAdd, setImagesToAdd] = useState(1);
-  const [nextId, setNextId] = useState(101);
+  const [nextId, setNextId] = useState(21);
   const [isAddingImages, setIsAddingImages] = useState(false);
   const [newImageIndexes, setNewImageIndexes] = useState<number[]>([]);
   const [gsapLoaded, setGsapLoaded] = useState(false);
+  const [currentAnimatingPerson, setCurrentAnimatingPerson] =
+    useState<Participant | null>(null);
+  const [showPersonInfo, setShowPersonInfo] = useState(false);
 
   // Ref declarations
   const containerRef = useRef<HTMLDivElement>(null);
@@ -120,19 +247,6 @@ const PhotoLoopApp = () => {
         document.head.removeChild(script);
       }
     };
-  }, []);
-
-  // Generate 100 participants with placeholder images
-  useEffect(() => {
-    const generateParticipants = () => {
-      return Array.from({ length: 100 }, (_, index) => ({
-        id: index + 1,
-        name: `Person ${index + 1}`,
-        imageUrl: `https://picsum.photos/150/150?random=${index + 1}`,
-      }));
-    };
-
-    setParticipants(generateParticipants());
   }, []);
 
   // Countdown timer
@@ -170,6 +284,9 @@ const PhotoLoopApp = () => {
       imageIndex < 10
         ? leftSideParticipants[imageIndex]
         : rightSideParticipants[imageIndex - 10];
+
+    setCurrentAnimatingPerson(participant);
+    console.log("Currently animating:", participant);
 
     // Get positions
     const imageRect = imageElement.getBoundingClientRect();
@@ -209,11 +326,16 @@ const PhotoLoopApp = () => {
       gsap.to(imageElement, {
         x: centerX,
         y: centerY,
-        scale: 2.5,
+        scale: 5,
         zIndex: 1000,
         duration: 1.2,
         ease: "power1.inOut",
         onComplete: () => {
+          // Show person info 500ms after image reaches center
+          setTimeout(() => {
+            setShowPersonInfo(true);
+          }, 500);
+
           // Add name element to center area and fade it in
           if (centerRef.current) {
             centerRef.current.appendChild(nameElement);
@@ -227,7 +349,10 @@ const PhotoLoopApp = () => {
 
           // Hold for 3 seconds, then animate back
           setTimeout(() => {
-            // Fade out name with GSAP
+            // Hide person info 500ms before image starts going back
+            setShowPersonInfo(false);
+
+            // Fade out name with GSAP (500ms before image starts going back)
             gsap.to(nameElement, {
               opacity: 0,
               duration: 0.5,
@@ -240,19 +365,23 @@ const PhotoLoopApp = () => {
               },
             });
 
-            // Animate image back to original position with GSAP
-            gsap.to(imageElement, {
-              x: 0,
-              y: 0,
-              scale: 1,
-              zIndex: 1,
-              duration: 1.2,
-              ease: "power1.inOut",
-              onComplete: () => {
-                setIsAnimating(false);
-                setNextAnimationIn(3);
-              },
-            });
+            // Start animating image back 500ms after name starts fading out
+            setTimeout(() => {
+              gsap.to(imageElement, {
+                x: 0,
+                y: 0,
+                scale: 1,
+                zIndex: 1,
+                duration: 1.2,
+                ease: "power1.inOut",
+                onComplete: () => {
+                  setIsAnimating(false);
+                  setCurrentAnimatingPerson(null);
+                  setShowPersonInfo(false);
+                  setNextAnimationIn(3);
+                },
+              });
+            }, 500);
           }, 3000);
         },
       });
@@ -264,9 +393,14 @@ const PhotoLoopApp = () => {
         {
           x: centerX,
           y: centerY,
-          scale: 2.5,
+          scale: 5,
           zIndex: 1000,
           onComplete: () => {
+            // Show person info 500ms after image reaches center
+            setTimeout(() => {
+              setShowPersonInfo(true);
+            }, 500);
+
             // Add name element to center area and fade it in
             if (centerRef.current) {
               centerRef.current.appendChild(nameElement);
@@ -278,6 +412,9 @@ const PhotoLoopApp = () => {
 
             // Hold for 3 seconds, then animate back
             setTimeout(() => {
+              // Hide person info 500ms before image starts going back
+              setShowPersonInfo(false);
+
               // Fade out name
               nameElement.style.transition = "opacity 0.5s ease-out";
               nameElement.style.opacity = "0";
@@ -288,21 +425,25 @@ const PhotoLoopApp = () => {
                   nameElement.parentNode.removeChild(nameElement);
                 }
 
-                // Animate image back to original position
-                fallbackAnimateElement(
-                  imageElement,
-                  {},
-                  {
-                    x: 0,
-                    y: 0,
-                    scale: 1,
-                    zIndex: 1,
-                    onComplete: () => {
-                      setIsAnimating(false);
-                      setNextAnimationIn(3);
-                    },
-                  }
-                );
+                // Start animating image back 500ms after name starts fading out
+                setTimeout(() => {
+                  fallbackAnimateElement(
+                    imageElement,
+                    {},
+                    {
+                      x: 0,
+                      y: 0,
+                      scale: 1,
+                      zIndex: 1,
+                      onComplete: () => {
+                        setIsAnimating(false);
+                        setCurrentAnimatingPerson(null);
+                        setShowPersonInfo(false);
+                        setNextAnimationIn(3);
+                      },
+                    }
+                  );
+                }, 500);
               }, 500);
             }, 3000);
           },
@@ -344,6 +485,7 @@ const PhotoLoopApp = () => {
 
     const newImages = Array.from({ length: imagesToAdd }, (_, index) => ({
       id: nextId + index,
+      shopName: `Shop ${nextId + index}`,
       name: `Person ${nextId + index}`,
       imageUrl: `https://picsum.photos/150/150?random=${nextId + index}`,
     }));
@@ -464,6 +606,21 @@ const PhotoLoopApp = () => {
     <div
       ref={containerRef}
       className="h-screen w-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 overflow-hidden relative">
+      <div className="w-full h-screen absolute inset-0 z-0">
+        <img
+          src="/images/background-2.png"
+          alt="background image"
+          className="w-full h-full object-fill object-center"
+        />
+      </div>
+      {/* Golden frame */}
+      <div className="w-full h-screen absolute inset-0 z-10">
+        <img
+          src="/images/golden-frame.png"
+          alt="golden-frame"
+          className="w-full h-full object-fill"
+        />
+      </div>
       {/* Add Images Menu */}
       {showMenu && (
         <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -514,7 +671,7 @@ const PhotoLoopApp = () => {
       )}
 
       {/* Add Images Button */}
-      <div className="absolute top-4 right-4">
+      <div className="absolute top-4 right-4 z-50">
         <button
           onClick={() => setShowMenu(true)}
           disabled={isAddingImages}
@@ -528,7 +685,7 @@ const PhotoLoopApp = () => {
       </div>
 
       {/* Left Side - 2 columns with 5 images each */}
-      <div className="absolute left-8 top-1/2 transform -translate-y-1/2">
+      <div className="absolute left-28 top-1/2 transform -translate-y-1/2">
         <div className="grid grid-cols-2 gap-4">
           {leftSideParticipants.map((participant, index) => (
             <div key={participant.id} className="relative">
@@ -542,11 +699,11 @@ const PhotoLoopApp = () => {
                 draggable={false}
                 style={{ position: "relative", zIndex: 1 }}
               />
-              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
+              {/* <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
                 <span className="text-xs text-gray-300 whitespace-nowrap">
                   {participant.name}
                 </span>
-              </div>
+              </div> */}
             </div>
           ))}
         </div>
@@ -555,15 +712,30 @@ const PhotoLoopApp = () => {
       {/* Center Area - Animation space */}
       <div
         ref={centerRef}
-        className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center">
+        className="absolute opacity-0 left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-48 rounded-full border-2 border-dashed border-gray-600 flex items-center justify-center">
         <div className="text-gray-500 text-center">
           <div className="text-sm">Animation</div>
           <div className="text-sm">Center</div>
         </div>
       </div>
 
+      <div className="absolute bottom-32 text-center z-50 left-1/2 transform -translate-x-1/2 h-fit">
+        <p
+          className={`transition-opacity duration-500 text-4xl text-yellow-400 ${
+            showPersonInfo ? "opacity-100" : "opacity-0"
+          }`}>
+          {currentAnimatingPerson?.name}
+        </p>
+        <p
+          className={`transition-opacity duration-500 delay-200 text-2xl text-yellow-700 ${
+            showPersonInfo ? "opacity-100" : "opacity-0"
+          }`}>
+          {currentAnimatingPerson?.shopName}
+        </p>
+      </div>
+
       {/* Right Side - 2 columns with 5 images each */}
-      <div className="absolute right-8 top-1/2 transform -translate-y-1/2">
+      <div className="absolute right-28 top-1/2 transform -translate-y-1/2">
         <div className="grid grid-cols-2 gap-4">
           {rightSideParticipants.map((participant, index) => (
             <div key={participant.id} className="relative">
@@ -579,18 +751,18 @@ const PhotoLoopApp = () => {
                 draggable={false}
                 style={{ position: "relative", zIndex: 1 }}
               />
-              <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
+              {/* <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2">
                 <span className="text-xs text-gray-300 whitespace-nowrap">
                   {participant.name}
                 </span>
-              </div>
+              </div> */}
             </div>
           ))}
         </div>
       </div>
 
       {/* Status indicator */}
-      <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
+      {/* <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
         <div className="bg-black bg-opacity-50 rounded-full px-4 py-2">
           <span className="text-white text-sm">
             {isAddingImages
@@ -600,19 +772,19 @@ const PhotoLoopApp = () => {
               : `⏱️ Next animation in ${nextAnimationIn}s`}
           </span>
         </div>
-      </div>
+      </div> */}
 
       {/* Participant counter */}
-      <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
+      {/* <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2">
         <div className="bg-black bg-opacity-50 rounded-full px-4 py-2">
           <span className="text-white text-sm">
             Showing 20 of {participants.length} participants
           </span>
         </div>
-      </div>
+      </div> */}
 
       {/* Instructions */}
-      <div className="absolute bottom-4 left-4">
+      {/* <div className="absolute bottom-4 left-4">
         <div className="bg-black bg-opacity-50 rounded-lg px-3 py-2">
           <div className="text-white text-xs">
             <div>• 2 columns × 5 images per side</div>
@@ -621,7 +793,7 @@ const PhotoLoopApp = () => {
             <div>• Click "Add Images" to add new ones</div>
           </div>
         </div>
-      </div>
+      </div> */}
     </div>
   );
 };
