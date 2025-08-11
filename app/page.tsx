@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface AnimatingCard {
@@ -12,17 +13,33 @@ interface AnimatingCard {
   gridIndex: number;
 }
 
+interface CardData {
+  id: number;
+  outletName: string;
+  bpName: string;
+  imageUrl: string;
+  isNew?: boolean;
+}
+
 export default function AnimatedCardsPage() {
+  // Configurable fetch interval (in minutes)
+  const FETCH_INTERVAL_MINUTES = 0.5;
+  const FETCH_INTERVAL_MS = FETCH_INTERVAL_MINUTES * 60 * 1000;
+
   const [animatingCard, setAnimatingCard] = useState<AnimatingCard | null>(
     null
   );
+  const [showText, setShowText] = useState(false);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const [data, setData] = useState([]);
+  const [data, setData] = useState<CardData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
+  const [timeUntilFetch, setTimeUntilFetch] = useState(0);
 
-  const fetchPhotoLoop = async () => {
-    setLoading(true);
+  const fetchPhotoLoop = async (isInitial = false) => {
+    if (!isInitial) {
+      setLoading(true);
+    }
     setError(null);
 
     try {
@@ -37,27 +54,78 @@ export default function AnimatedCardsPage() {
       const result = await response.json();
 
       // Extract only outletName, bpName, and imageUrl from each item
-      const filteredData = result.data.map((item, index) => ({
-        id: index,
-        outletName: item.outletName,
-        bpName: item.bpName,
-        imageUrl: item.imageUrl,
-      }));
+      const newData: CardData[] = result.data.map(
+        (item: any, index: number) => ({
+          id: index,
+          outletName: item.outletName,
+          bpName: item.bpName,
+          imageUrl: item.imageUrl,
+        })
+      );
 
-      setData(filteredData);
-    } catch (err) {
+      setData((prevData) => {
+        if (isInitial) {
+          return newData;
+        }
+
+        // Compare with previous data to find new items
+        const prevIds = new Set(
+          prevData.map((item) => `${item.outletName}-${item.bpName}`)
+        );
+        const updatedData = newData.map((item) => ({
+          ...item,
+          isNew: !prevIds.has(`${item.outletName}-${item.bpName}`),
+        }));
+
+        // Remove 'isNew' flag after animation
+        setTimeout(() => {
+          setData((prev) => prev.map((item) => ({ ...item, isNew: false })));
+        }, 2000);
+
+        return updatedData;
+      });
+
+      // Reset countdown
+      setTimeUntilFetch(FETCH_INTERVAL_MS);
+    } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
+  // Initial fetch
   useEffect(() => {
-    fetchPhotoLoop();
+    fetchPhotoLoop(true);
   }, []);
 
+  // Set up fetch interval and countdown
+  useEffect(() => {
+    const fetchInterval = setInterval(() => {
+      fetchPhotoLoop();
+    }, FETCH_INTERVAL_MS);
+
+    // Update countdown every second
+    const countdownInterval = setInterval(() => {
+      setTimeUntilFetch((prev) => {
+        if (prev <= 1000) {
+          return FETCH_INTERVAL_MS;
+        }
+        return prev - 1000;
+      });
+    }, 1000);
+
+    // Initialize countdown
+    setTimeUntilFetch(FETCH_INTERVAL_MS);
+
+    return () => {
+      clearInterval(fetchInterval);
+      clearInterval(countdownInterval);
+    };
+  }, [FETCH_INTERVAL_MS]);
+
   const selectRandomCard = () => {
-    if (animatingCard || !data.length) return; // Don't start if animating or no data
+    if (animatingCard || !data.length) return;
 
     const randomIndex = Math.floor(Math.random() * data.length);
     const cardElement = cardRefs.current[randomIndex];
@@ -75,20 +143,16 @@ export default function AnimatedCardsPage() {
         gridIndex,
       });
 
-      // Return to original position after 3-4 seconds
-      setTimeout(() => {
-        setAnimatingCard(null);
-      }, 3500);
+      setTimeout(() => setShowText(true), 800);
+      setTimeout(() => setShowText(false), 2700);
+      setTimeout(() => setAnimatingCard(null), 3500);
     }
   };
 
   useEffect(() => {
-    if (!data.length) return; // Don't start animations until data is loaded
+    if (!data.length) return;
 
-    // Start first animation after component mounts
     const initialTimer = setTimeout(selectRandomCard, 1000);
-
-    // Set up recurring animations
     const interval = setInterval(selectRandomCard, 6000);
 
     return () => {
@@ -97,18 +161,36 @@ export default function AnimatedCardsPage() {
     };
   }, [data, animatingCard]);
 
-  if (loading)
+  const formatTime = (ms: number) => {
+    const minutes = Math.floor(ms / 60000);
+    const seconds = Math.floor((ms % 60000) / 1000);
+    return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+  };
+
+  if (loading && !data.length)
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
-        Loading...
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          Loading...
+        </motion.div>
       </div>
     );
-  if (error)
+
+  if (error && !data.length)
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-red-500">
-        Error: {error}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}>
+          Error: {error}
+        </motion.div>
       </div>
     );
+
   if (!data.length)
     return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
@@ -122,27 +204,70 @@ export default function AnimatedCardsPage() {
 
   return (
     <div className="min-h-screen overflow-hidden bg-black">
+      {/* Fetch Status Box */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="fixed top-4 right-4 z-50 bg-gray-900 bg-opacity-90 text-white p-3 rounded-lg backdrop-blur-sm border border-gray-700">
+        <div className="flex items-center space-x-2 text-sm">
+          {loading ? (
+            <>
+              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+              <span>Fetching...</span>
+            </>
+          ) : (
+            <>
+              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+              <span>Next fetch in {formatTime(timeUntilFetch)}</span>
+            </>
+          )}
+        </div>
+      </motion.div>
+
+      {/* Left Grid */}
       <div className="fixed left-4 top-1/2 -translate-y-1/2 z-10">
-        {/* Left Grid */}
         <div className="grid grid-cols-2 gap-2">
-          {leftCards.map((card, index) => (
-            <div
-              key={card.id}
-              ref={(el) => (cardRefs.current[index] = el)}
-              className={cn(
-                "w-16 h-16 rounded-lg overflow-hidden shadow-lg transition-all duration-500 border-2 border-red-500",
-                "hover:shadow-xl hover:scale-105",
-                animatingCard?.id === index
-                  ? "opacity-0 scale-0"
-                  : "opacity-100 scale-100"
-              )}>
-              <img
-                src={card.imageUrl || "/placeholder.svg"}
-                alt={card.outletName || `Card ${index + 1}`}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
+          <AnimatePresence>
+            {leftCards.map((card, index) => (
+              <motion.div
+                key={`${card.outletName}-${card.bpName}`}
+                ref={(el) => (cardRefs.current[index] = el)}
+                initial={
+                  card.isNew ? { scale: 0, opacity: 0, rotate: 180 } : false
+                }
+                animate={{
+                  scale: animatingCard?.id === index ? 0 : 1,
+                  opacity: animatingCard?.id === index ? 0 : 1,
+                  rotate: 0,
+                }}
+                transition={{
+                  duration: card.isNew ? 0.6 : 0.5,
+                  type: "spring",
+                  bounce: 0.3,
+                }}
+                className={cn(
+                  "w-16 h-16 rounded-lg overflow-hidden shadow-lg border-2 border-red-500",
+                  "hover:shadow-xl hover:scale-105 transition-transform duration-200",
+                  card.isNew && "ring-2 ring-yellow-400 ring-opacity-75"
+                )}>
+                <img
+                  src={card.imageUrl || "/placeholder.svg"}
+                  alt={card.outletName || `Card ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                {card.isNew && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ delay: 0.3, duration: 0.3 }}
+                    className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                    !
+                  </motion.div>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -166,45 +291,106 @@ export default function AnimatedCardsPage() {
               }
               className="w-full h-full object-cover"
             />
-            {/* Optional: Display outlet info */}
-            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2 text-xs">
-              <p className="truncate">{data[animatingCard.id]?.outletName}</p>
-              <p className="truncate text-gray-300">
-                {data[animatingCard.id]?.bpName}
-              </p>
-            </div>
           </div>
         )}
-        <div className="text-white text-center space-y-8 px-8">
+
+        <AnimatePresence>
+          {animatingCard && (
+            <motion.div
+              initial={{ opacity: 0, y: 30, scale: 0.9 }}
+              animate={{
+                opacity: showText ? 1 : 0,
+                y: showText ? 0 : 30,
+                scale: showText ? 1 : 0.9,
+              }}
+              exit={{ opacity: 0, y: -30, scale: 0.9 }}
+              transition={{ duration: 0.7, ease: "easeOut" }}
+              className="text-center absolute bottom-10 left-1/2 -translate-x-1/2 bg-black bg-opacity-75 text-white p-4 rounded-lg backdrop-blur-sm">
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{
+                  opacity: showText ? 1 : 0,
+                  y: showText ? 0 : 20,
+                }}
+                transition={{ duration: 0.7, delay: 0.1 }}
+                className="text-5xl font-semibold mb-2">
+                {data[animatingCard.id]?.outletName}
+              </motion.p>
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{
+                  opacity: showText ? 1 : 0,
+                  y: showText ? 0 : 20,
+                }}
+                transition={{ duration: 0.7, delay: 0.2 }}
+                className="text-xl text-gray-300">
+                {data[animatingCard.id]?.bpName}
+              </motion.p>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          className="text-white text-center space-y-8 px-8">
           <h1 className="text-4xl font-bold">Animated Card Gallery</h1>
           <p className="text-lg text-gray-300 max-w-2xl">
             Watch as cards automatically animate from the side grids to the
             center. Displaying {data.length} outlets from the photo loop.
+            <br />
+            <span className="text-sm text-gray-400">
+              Auto-refreshes every {FETCH_INTERVAL_MINUTES} minutes
+            </span>
           </p>
-        </div>
+        </motion.div>
       </div>
 
+      {/* Right Grid */}
       <div className="fixed right-4 top-1/2 -translate-y-1/2 z-10">
-        {/* Right Grid */}
         <div className="grid grid-cols-2 gap-2">
-          {rightCards.map((card, index) => (
-            <div
-              key={card.id}
-              ref={(el) => (cardRefs.current[index + leftGridSize] = el)}
-              className={cn(
-                "w-16 h-16 rounded-lg overflow-hidden shadow-lg transition-all border-2 border-red-500 duration-500",
-                "hover:shadow-xl hover:scale-105",
-                animatingCard?.id === index + leftGridSize
-                  ? "opacity-0 scale-0"
-                  : "opacity-100 scale-100"
-              )}>
-              <img
-                src={card.imageUrl || "/placeholder.svg"}
-                alt={card.outletName || `Card ${index + leftGridSize + 1}`}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          ))}
+          <AnimatePresence>
+            {rightCards.map((card, index) => (
+              <motion.div
+                key={`${card.outletName}-${card.bpName}`}
+                ref={(el) => (cardRefs.current[index + leftGridSize] = el)}
+                initial={
+                  card.isNew ? { scale: 0, opacity: 0, rotate: -180 } : false
+                }
+                animate={{
+                  scale: animatingCard?.id === index + leftGridSize ? 0 : 1,
+                  opacity: animatingCard?.id === index + leftGridSize ? 0 : 1,
+                  rotate: 0,
+                }}
+                transition={{
+                  duration: card.isNew ? 0.6 : 0.5,
+                  type: "spring",
+                  bounce: 0.3,
+                }}
+                className={cn(
+                  "w-16 h-16 rounded-lg overflow-hidden shadow-lg transition-all border-2 border-red-500",
+                  "hover:shadow-xl hover:scale-105 transition-transform duration-200",
+                  card.isNew && "ring-2 ring-yellow-400 ring-opacity-75"
+                )}>
+                <img
+                  src={card.imageUrl || "/placeholder.svg"}
+                  alt={card.outletName || `Card ${index + leftGridSize + 1}`}
+                  className="w-full h-full object-cover"
+                />
+                {card.isNew && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    exit={{ scale: 0, opacity: 0 }}
+                    transition={{ delay: 0.3, duration: 0.3 }}
+                    className="absolute -top-1 -right-1 bg-yellow-400 text-black text-xs rounded-full w-4 h-4 flex items-center justify-center font-bold">
+                    !
+                  </motion.div>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       </div>
 
