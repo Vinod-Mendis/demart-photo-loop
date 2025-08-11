@@ -1,2 +1,54 @@
+/** @format */
+
 @import "tailwindcss";
 
+.neon-flow {
+  border: 3px solid transparent;
+  background: linear-gradient(#000000, #000000) padding-box,
+    linear-gradient(90deg, #8b5cf6, #3b82f6, #06b6d4, #8b5cf6, #3b82f6)
+      border-box;
+  background-size: 400% 100%;
+  animation: flowingGradient 4s ease-in-out infinite;
+  box-shadow: 0 0 30px rgba(139, 92, 246, 0.4), 0 0 60px rgba(59, 130, 246, 0.2),
+    0 0 90px rgba(6, 182, 212, 0.1);
+}
+.neon-flow-2 {
+  border: 3px solid transparent;
+  background: linear-gradient(#000000, #000000) padding-box,
+    linear-gradient(90deg, #8b5cf6, #3b82f6, #06b6d4, #8b5cf6, #3b82f6)
+      border-box;
+  background-size: 400% 100%;
+  animation: flowingGradient2 4s ease-in-out infinite;
+}
+.neon-flow:hover {
+  transform: translateY(-2px);
+}
+
+@keyframes flowingGradient {
+  0% {
+    background-position: 0% 0%;
+    box-shadow: 0 0 30px rgba(139, 92, 246, 0.6),
+      0 0 60px rgba(59, 130, 246, 0.3);
+  }
+  50% {
+    background-position: 100% 0%;
+    box-shadow: 0 0 30px rgba(6, 182, 212, 0.6),
+      0 0 60px rgba(139, 92, 246, 0.3);
+  }
+  100% {
+    background-position: 0% 0%;
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.6),
+      0 0 60px rgba(6, 182, 212, 0.3);
+  }
+}
+@keyframes flowingGradient2 {
+  0% {
+    background-position: 0% 0%;
+  }
+  50% {
+    background-position: 100% 0%;
+  }
+  100% {
+    background-position: 0% 0%;
+  }
+}

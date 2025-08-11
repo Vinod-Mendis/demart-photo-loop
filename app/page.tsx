@@ -199,7 +199,15 @@ export default function AnimatedCardsPage() {
           <FloatingStars starCount={100} animationSpeed={1} />
           {/* Blur shadow blob */}
           <div className="w-[45rem] h-52 bg-white/20 rounded-full blur-3xl absolute z-10"></div>
-          {/* Background image */}
+          {/* Background image 1 */}
+          <div className="w-full h-screen absolute inset-0 z-10">
+            <img
+              src="/images/background-1.png"
+              alt="background image"
+              className="w-full h-full object-fill object-center"
+            />
+          </div>
+          {/* Background image 2 */}
           <div className="w-full h-screen absolute inset-0 z-0">
             <img
               src="/images/background-2.png"
@@ -207,8 +215,9 @@ export default function AnimatedCardsPage() {
               className="w-full h-full object-fill object-center"
             />
           </div>
+
           {/* Golden frame */}
-          <div className="w-full h-screen absolute inset-0 z-10">
+          <div className="w-full h-screen absolute inset-0 z-20">
             <img
               src="/images/golden-frame.png"
               alt="golden-frame"
@@ -248,7 +257,15 @@ export default function AnimatedCardsPage() {
         <FloatingStars starCount={100} animationSpeed={1} />
         {/* Blur shadow blob */}
         <div className="w-[45rem] h-52 bg-white/20 rounded-full blur-3xl absolute z-10"></div>
-        {/* Background image */}
+        {/* Background image 1 */}
+        <div className="w-full h-screen absolute inset-0 z-10">
+          <img
+            src="/images/background-1.png"
+            alt="background image"
+            className="w-full h-full object-fill object-center"
+          />
+        </div>
+        {/* Background image 2 */}
         <div className="w-full h-screen absolute inset-0 z-0">
           <img
             src="/images/background-2.png"
@@ -257,7 +274,7 @@ export default function AnimatedCardsPage() {
           />
         </div>
         {/* Golden frame */}
-        <div className="w-full h-screen absolute inset-0 z-10">
+        <div className="w-full h-screen absolute inset-0 z-20">
           <img
             src="/images/golden-frame.png"
             alt="golden-frame"
@@ -335,7 +352,7 @@ export default function AnimatedCardsPage() {
       <div className="flex items-center justify-center min-h-screen relative">
         {animatingCard && (
           <div
-            className="fixed z-50 rounded-lg overflow-hidden shadow-2xl"
+            className="fixed z-50 rounded-lg overflow-hidden shadow-2xl neon-flow"
             style={{
               left: animatingCard.originalRect.left,
               top: animatingCard.originalRect.top,
