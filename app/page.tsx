@@ -5,11 +5,6 @@
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
-interface CardData {
-  id: number;
-  image: string;
-}
-
 interface AnimatingCard {
   id: number;
   originalRect: DOMRect;
@@ -18,30 +13,60 @@ interface AnimatingCard {
 }
 
 export default function AnimatedCardsPage() {
-  const [cards] = useState<CardData[]>(() =>
-    Array.from({ length: 20 }, (_, i) => ({
-      id: i,
-      image: `/placeholder.svg?height=120&width=120&query=abstract pattern ${
-        i + 1
-      }`,
-    }))
-  );
-
   const [animatingCard, setAnimatingCard] = useState<AnimatingCard | null>(
     null
   );
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchPhotoLoop = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        "https://dmart-backend-qhdt.onrender.com/api/photo-loop"
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+
+      // Extract only outletName, bpName, and imageUrl from each item
+      const filteredData = result.data.map((item, index) => ({
+        id: index,
+        outletName: item.outletName,
+        bpName: item.bpName,
+        imageUrl: item.imageUrl,
+      }));
+
+      setData(filteredData);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPhotoLoop();
+  }, []);
 
   const selectRandomCard = () => {
-    if (animatingCard) return; // Don't start new animation if one is running
+    if (animatingCard || !data.length) return; // Don't start if animating or no data
 
-    const randomIndex = Math.floor(Math.random() * 20);
+    const randomIndex = Math.floor(Math.random() * data.length);
     const cardElement = cardRefs.current[randomIndex];
 
     if (cardElement) {
       const rect = cardElement.getBoundingClientRect();
-      const side = randomIndex < 10 ? "left" : "right";
-      const gridIndex = randomIndex % 10;
+      const leftGridSize = Math.ceil(data.length / 2);
+      const side = randomIndex < leftGridSize ? "left" : "right";
+      const gridIndex = randomIndex % leftGridSize;
 
       setAnimatingCard({
         id: randomIndex,
@@ -58,20 +83,42 @@ export default function AnimatedCardsPage() {
   };
 
   useEffect(() => {
+    if (!data.length) return; // Don't start animations until data is loaded
+
     // Start first animation after component mounts
     const initialTimer = setTimeout(selectRandomCard, 1000);
 
     // Set up recurring animations
-    const interval = setInterval(selectRandomCard, 6000); // 6 seconds total cycle
+    const interval = setInterval(selectRandomCard, 6000);
 
     return () => {
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
-  }, [animatingCard]);
+  }, [data, animatingCard]);
 
-  const leftCards = cards.slice(0, 10);
-  const rightCards = cards.slice(10, 20);
+  if (loading)
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        Loading...
+      </div>
+    );
+  if (error)
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-red-500">
+        Error: {error}
+      </div>
+    );
+  if (!data.length)
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center text-white">
+        No data available
+      </div>
+    );
+
+  const leftGridSize = Math.ceil(data.length / 2);
+  const leftCards = data.slice(0, leftGridSize);
+  const rightCards = data.slice(leftGridSize);
 
   return (
     <div className="min-h-screen overflow-hidden bg-black">
@@ -90,8 +137,8 @@ export default function AnimatedCardsPage() {
                   : "opacity-100 scale-100"
               )}>
               <img
-                src={card.image || "/placeholder.svg"}
-                alt={`Card ${card.id + 1}`}
+                src={card.imageUrl || "/placeholder.svg"}
+                alt={card.outletName || `Card ${index + 1}`}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -112,18 +159,27 @@ export default function AnimatedCardsPage() {
                 "cardToCenter 0.8s ease-out forwards, centerToCard 0.8s ease-in 2.7s forwards",
             }}>
             <img
-              src={cards[animatingCard.id].image || "/placeholder.svg"}
-              alt={`Animating Card ${animatingCard.id + 1}`}
+              src={data[animatingCard.id]?.imageUrl || "/placeholder.svg"}
+              alt={
+                data[animatingCard.id]?.outletName ||
+                `Animating Card ${animatingCard.id + 1}`
+              }
               className="w-full h-full object-cover"
             />
+            {/* Optional: Display outlet info */}
+            <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-75 text-white p-2 text-xs">
+              <p className="truncate">{data[animatingCard.id]?.outletName}</p>
+              <p className="truncate text-gray-300">
+                {data[animatingCard.id]?.bpName}
+              </p>
+            </div>
           </div>
         )}
         <div className="text-white text-center space-y-8 px-8">
           <h1 className="text-4xl font-bold">Animated Card Gallery</h1>
           <p className="text-lg text-gray-300 max-w-2xl">
             Watch as cards automatically animate from the side grids to the
-            center. The page is scrollable with plenty of black space for clear
-            visibility.
+            center. Displaying {data.length} outlets from the photo loop.
           </p>
         </div>
       </div>
@@ -134,17 +190,17 @@ export default function AnimatedCardsPage() {
           {rightCards.map((card, index) => (
             <div
               key={card.id}
-              ref={(el) => (cardRefs.current[index + 10] = el)}
+              ref={(el) => (cardRefs.current[index + leftGridSize] = el)}
               className={cn(
                 "w-16 h-16 rounded-lg overflow-hidden shadow-lg transition-all border-2 border-red-500 duration-500",
                 "hover:shadow-xl hover:scale-105",
-                animatingCard?.id === index + 10
+                animatingCard?.id === index + leftGridSize
                   ? "opacity-0 scale-0"
                   : "opacity-100 scale-100"
               )}>
               <img
-                src={card.image || "/placeholder.svg"}
-                alt={`Card ${card.id + 1}`}
+                src={card.imageUrl || "/placeholder.svg"}
+                alt={card.outletName || `Card ${index + leftGridSize + 1}`}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -176,7 +232,7 @@ export default function AnimatedCardsPage() {
             top: ${animatingCard?.originalRect.top}px;
             transform: translate(0, 0) scale(1);
             width: ${animatingCard?.originalRect.width}px;
-            height: ${animatingCard?.originalRect.width}px;
+            height: ${animatingCard?.originalRect.height}px;
           }
         }
       `}</style>
