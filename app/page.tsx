@@ -60,7 +60,10 @@ export default function AnimatedCardsPage() {
 
       // Extract only outletName, bpName, and imageUrl from each item
       const newData: CardData[] = result.data.map(
-        (item: any, index: number) => ({
+        (
+          item: { outletName: string; bpName: string; imageUrl: string },
+          index: number
+        ) => ({
           id: index,
           outletName: item.outletName,
           bpName: item.bpName,
@@ -92,8 +95,8 @@ export default function AnimatedCardsPage() {
 
       // Reset countdown
       setTimeUntilFetch(FETCH_INTERVAL_MS);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
       setTimeout(() => {
         setLoading(false);
@@ -309,7 +312,9 @@ export default function AnimatedCardsPage() {
             {leftCards.map((card, index) => (
               <motion.div
                 key={`${card.outletName}-${card.bpName}`}
-                ref={(el) => (cardRefs.current[index] = el)}
+                ref={(el) => {
+                  cardRefs.current[index] = el;
+                }}
                 initial={
                   card.isNew ? { scale: 0, opacity: 0, rotate: 180 } : false
                 }
@@ -432,7 +437,9 @@ export default function AnimatedCardsPage() {
             {rightCards.map((card, index) => (
               <motion.div
                 key={`${card.outletName}-${card.bpName}`}
-                ref={(el) => (cardRefs.current[index + leftGridSize] = el)}
+                ref={(el) => {
+                  cardRefs.current[index + leftGridSize] = el;
+                }}
                 initial={
                   card.isNew ? { scale: 0, opacity: 0, rotate: -180 } : false
                 }
