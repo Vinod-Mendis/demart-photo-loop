@@ -1,3 +1,5 @@
+/** @format */
+
 "use client";
 
 import { useState, useEffect, useRef } from "react";
@@ -25,21 +27,23 @@ export default function AnimatedCardsPage() {
   const FETCH_INTERVAL_MINUTES = 2;
   const FETCH_INTERVAL_MS = FETCH_INTERVAL_MINUTES * 60 * 1000;
 
-  const [animatingCard, setAnimatingCard] = useState<AnimatingCard | null>(null);
+  const [animatingCard, setAnimatingCard] = useState<AnimatingCard | null>(
+    null
+  );
   const [showText, setShowText] = useState(false);
-  const [lastAnimatedIndex, setLastAnimatedIndex] = useState<number | null>(null);
+  const [currentCardIndex, setCurrentCardIndex] = useState<number>(0); // Changed from lastAnimatedIndex
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const [data, setData] = useState<CardData[]>([]);
   const [initialLoading, setInitialLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeUntilFetch, setTimeUntilFetch] = useState(0);
-  const [animationsPaused, setAnimationsPaused] = useState(false); // New state to pause animations
+  const [animationsPaused, setAnimationsPaused] = useState(false);
 
   const fetchPhotoLoop = async (isInitial = false) => {
     // Pause animations before starting fetch
     setAnimationsPaused(true);
-    
+
     // Clear any existing animation
     if (animatingCard) {
       setAnimatingCard(null);
@@ -67,7 +71,7 @@ export default function AnimatedCardsPage() {
       // Get the last 20 items (most recent)
       const totalItems = result.data.length;
       const startIndex = Math.max(0, totalItems - 20);
-      
+
       const newData: CardData[] = result.data
         .slice(startIndex)
         .map(
@@ -97,7 +101,7 @@ export default function AnimatedCardsPage() {
         if (newItems.length === 0) {
           return prevData;
         }
-        
+
         const markedNewItems = newItems.map((item) => ({
           ...item,
           isNew: true,
@@ -141,8 +145,8 @@ export default function AnimatedCardsPage() {
           // Resume animations after background fetch
           setTimeout(() => {
             setAnimationsPaused(false);
-            // Reset lastAnimatedIndex to allow fresh start
-            setLastAnimatedIndex(null);
+            // Reset to beginning of sequence when data updates
+            setCurrentCardIndex(0);
           }, 500); // Small delay to ensure refs are updated
         }, 1000);
       }
@@ -175,39 +179,28 @@ export default function AnimatedCardsPage() {
     };
   }, [FETCH_INTERVAL_MS]);
 
-  const selectRandomCard = () => {
+  // Modified function to select cards in order
+  const selectNextCard = () => {
     // Don't run animations if paused, no data, or already animating
     if (animationsPaused || animatingCard || !data.length) return;
 
-    let randomIndex;
-    let attempts = 0;
-    const maxAttempts = 10;
-
-    if (data.length > 1 && lastAnimatedIndex !== null) {
-      do {
-        randomIndex = Math.floor(Math.random() * data.length);
-        attempts++;
-      } while (randomIndex === lastAnimatedIndex && attempts < maxAttempts);
-    } else {
-      randomIndex = Math.floor(Math.random() * data.length);
-    }
-
-    const cardElement = cardRefs.current[randomIndex];
+    const cardElement = cardRefs.current[currentCardIndex];
 
     if (cardElement) {
       const rect = cardElement.getBoundingClientRect();
       const leftGridSize = Math.ceil(data.length / 2);
-      const side = randomIndex < leftGridSize ? "left" : "right";
-      const gridIndex = randomIndex % leftGridSize;
+      const side = currentCardIndex < leftGridSize ? "left" : "right";
+      const gridIndex = currentCardIndex % leftGridSize;
 
       setAnimatingCard({
-        id: randomIndex,
+        id: currentCardIndex,
         originalRect: rect,
         side,
         gridIndex,
       });
 
-      setLastAnimatedIndex(randomIndex);
+      // Move to next card, loop back to 0 when reaching the end
+      setCurrentCardIndex((prev) => (prev + 1) % data.length);
 
       setTimeout(() => setShowText(true), 800);
       setTimeout(() => setShowText(false), 2700);
@@ -220,14 +213,14 @@ export default function AnimatedCardsPage() {
   useEffect(() => {
     if (!data.length || animationsPaused) return;
 
-    const initialTimer = setTimeout(selectRandomCard, 1000);
-    const interval = setInterval(selectRandomCard, 6000);
+    const initialTimer = setTimeout(selectNextCard, 1000);
+    const interval = setInterval(selectNextCard, 6000);
 
     return () => {
       clearTimeout(initialTimer);
       clearInterval(interval);
     };
-  }, [data, animatingCard, animationsPaused]); // Include animationsPaused in dependencies
+  }, [data, animatingCard, animationsPaused, currentCardIndex]); // Added currentCardIndex to dependencies
 
   const formatTime = (ms: number) => {
     const minutes = Math.floor(ms / 60000);
@@ -243,21 +236,21 @@ export default function AnimatedCardsPage() {
           <div className="w-[45rem] h-52 bg-white/20 rounded-full blur-3xl absolute z-10"></div>
           <div className="w-full h-screen absolute inset-0 z-10">
             <img
-              src="/images/background-1.png"
+              src="/images/background-1.webp"
               alt="background image"
               className="w-full h-full object-fill object-center"
             />
           </div>
           <div className="w-full h-screen absolute inset-0 z-0">
             <img
-              src="/images/background-2.png"
+              src="/images/background-2.webp"
               alt="background image"
               className="w-full h-full object-fill object-center"
             />
           </div>
           <div className="w-full h-screen absolute inset-0 z-20">
             <img
-              src="/images/golden-frame.png"
+              src="/images/golden-frame.webp"
               alt="golden-frame"
               className="w-full h-full object-fill"
             />
@@ -293,31 +286,31 @@ export default function AnimatedCardsPage() {
   return (
     <div className="min-h-screen overflow-hidden bg-black">
       <>
-        <FloatingStars starCount={100} animationSpeed={1} />
+        {/* <FloatingStars starCount={100} animationSpeed={1} /> */}
         <div className="w-[45rem] h-52 bg-white/20 rounded-full blur-3xl absolute z-10"></div>
         <div className="w-full h-screen absolute inset-0 z-10">
           <img
-            src="/images/background-1.png"
+            src="/images/background-1.webp"
             alt="background image"
             className="w-full h-full object-fill object-center"
           />
         </div>
         <div className="w-full h-screen absolute inset-0 z-0">
           <img
-            src="/images/background-2.png"
+            src="/images/background-2.webp"
             alt="background image"
             className="w-full h-full object-fill object-center"
           />
         </div>
         <div className="w-full h-screen absolute inset-0 z-20">
           <img
-            src="/images/golden-frame.png"
+            src="/images/golden-frame.webp"
             alt="golden-frame"
             className="w-full h-full object-fill"
           />
         </div>
       </>
-      
+
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -336,7 +329,10 @@ export default function AnimatedCardsPage() {
           ) : (
             <>
               <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-              <span>Next fetch in {formatTime(timeUntilFetch)}</span>
+              <span>
+                Next fetch in {formatTime(timeUntilFetch)} | Card{" "}
+                {currentCardIndex + 1}/{data.length}
+              </span>
             </>
           )}
         </div>
@@ -378,7 +374,10 @@ export default function AnimatedCardsPage() {
                 }}
                 className={cn(
                   "w-28 h-28 rounded-lg overflow-hidden shadow-lg relative",
-                  "hover:shadow-xl hover:scale-105 transition-transform duration-200"
+                  "hover:shadow-xl hover:scale-105 transition-transform duration-200",
+                  // Add visual indicator for current card
+                  currentCardIndex === index &&
+                    "ring-2 ring-blue-400 ring-opacity-50"
                 )}>
                 <img
                   src={card.imageUrl || "/placeholder.svg"}
@@ -449,22 +448,6 @@ export default function AnimatedCardsPage() {
             </motion.div>
           )}
         </AnimatePresence>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="text-white text-center space-y-8 px-8">
-          <h1 className="text-4xl font-bold">Animated Card Gallery</h1>
-          <p className="text-lg text-gray-300 max-w-2xl">
-            Watch as cards automatically animate from the side grids to the
-            center. Displaying {data.length} outlets from the photo loop.
-            <br />
-            <span className="text-sm text-gray-400">
-              Auto-refreshes every {FETCH_INTERVAL_MINUTES} minutes
-            </span>
-          </p>
-        </motion.div>
       </div>
 
       {/* Right Grid */}
@@ -503,7 +486,10 @@ export default function AnimatedCardsPage() {
                 }}
                 className={cn(
                   "w-28 h-28 rounded-lg overflow-hidden shadow-lg relative transition-all",
-                  "hover:shadow-xl hover:scale-105 transition-transform duration-200"
+                  "hover:shadow-xl hover:scale-105 transition-transform duration-200",
+                  // Add visual indicator for current card
+                  currentCardIndex === index + 10 &&
+                    "ring-2 ring-blue-400 ring-opacity-50"
                 )}>
                 <img
                   src={card.imageUrl || "/placeholder.svg"}
