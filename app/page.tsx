@@ -18,7 +18,7 @@ interface AnimatingCard {
 interface CardData {
   id: number;
   outletName: string;
-  bpName: string;
+  retailerName: string;
   imageUrl: string;
   isNew?: boolean;
 }
@@ -73,12 +73,16 @@ export default function AnimatedCardsPage() {
         .reverse() // Add this line to reverse the order
         .map(
           (
-            item: { outletName: string; bpName: string; imageUrl: string },
+            item: {
+              outletName: string;
+              retailerName: string;
+              imageUrl: string;
+            },
             index: number
           ) => ({
             id: index, // Proper index assignment
             outletName: item.outletName,
-            bpName: item.bpName,
+            retailerName: item.retailerName,
             imageUrl: item.imageUrl,
           })
         );
@@ -89,10 +93,10 @@ export default function AnimatedCardsPage() {
         }
 
         const prevIds = new Set(
-          prevData.map((item) => `${item.outletName}-${item.bpName}`)
+          prevData.map((item) => `${item.outletName}-${item.retailerName}`)
         );
         const newItems = newData.filter(
-          (item) => !prevIds.has(`${item.outletName}-${item.bpName}`)
+          (item) => !prevIds.has(`${item.outletName}-${item.retailerName}`)
         );
 
         if (newItems.length === 0) {
@@ -349,7 +353,7 @@ export default function AnimatedCardsPage() {
           <AnimatePresence>
             {leftCards.map((card, index) => (
               <motion.div
-                key={`${card.outletName}-${card.bpName}`}
+                key={`${card.outletName}-${card.retailerName}`}
                 ref={(el) => {
                   cardRefs.current[index] = el;
                 }}
@@ -438,7 +442,7 @@ export default function AnimatedCardsPage() {
                 }}
                 transition={{ duration: 0.7, delay: 0.1 }}
                 className="text-5xl font-semibold mb-2">
-                {data[animatingCard.id]?.outletName}
+                {data[animatingCard.id]?.retailerName}
               </motion.p>
               <motion.p
                 initial={{ opacity: 0, y: 20 }}
@@ -447,8 +451,8 @@ export default function AnimatedCardsPage() {
                   y: showText ? 0 : 20,
                 }}
                 transition={{ duration: 0.7, delay: 0.2 }}
-                className="text-xl text-gray-300">
-                {data[animatingCard.id]?.bpName}
+                className="text-xl text-violet-400">
+                {data[animatingCard.id]?.outletName}
               </motion.p>
             </motion.div>
           )}
@@ -461,7 +465,7 @@ export default function AnimatedCardsPage() {
           <AnimatePresence>
             {rightCards.map((card, index) => (
               <motion.div
-                key={`${card.outletName}-${card.bpName}`}
+                key={`${card.outletName}-${card.retailerName}`}
                 ref={(el) => {
                   cardRefs.current[index + 10] = el;
                 }}
