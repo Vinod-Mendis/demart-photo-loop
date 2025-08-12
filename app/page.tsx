@@ -64,12 +64,13 @@ export default function AnimatedCardsPage() {
 
       const result = await response.json();
 
-      // Get the last 20 items (most recent)
+      // Get the last 20 items (most recent) and reverse them so newest are first
       const totalItems = result.data.length;
       const startIndex = Math.max(0, totalItems - 20);
 
       const newData: CardData[] = result.data
         .slice(startIndex)
+        .reverse() // Add this line to reverse the order
         .map(
           (
             item: { outletName: string; bpName: string; imageUrl: string },
@@ -103,12 +104,10 @@ export default function AnimatedCardsPage() {
           isNew: true,
         }));
 
-        let updatedData = [...prevData, ...markedNewItems];
+        let updatedData = [...markedNewItems, ...prevData]; // Add new items to FRONT
         if (updatedData.length > 20) {
-          const excess = updatedData.length - 20;
-          updatedData = updatedData.slice(excess);
+          updatedData = updatedData.slice(0, 20); // Remove from END (keep first 20)
         }
-
         updatedData = updatedData.map((item, index) => ({
           ...item,
           id: index,
