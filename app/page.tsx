@@ -24,9 +24,14 @@ interface CardData {
 }
 
 export default function AnimatedCardsPage() {
-  const FETCH_INTERVAL_MINUTES = 2;
+  const FETCH_INTERVAL_MINUTES = 0.5;
   const FETCH_INTERVAL_MS = FETCH_INTERVAL_MINUTES * 60 * 1000;
 
+  const [pendingData, setPendingData] = useState<CardData[] | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  useEffect(() => {
+    console.log("Animation state changed:", isAnimating);
+  }, [isAnimating]);
   const [animatingCard, setAnimatingCard] = useState<AnimatingCard | null>(
     null
   );
@@ -41,15 +46,6 @@ export default function AnimatedCardsPage() {
   const [animationsPaused, setAnimationsPaused] = useState(false);
 
   const fetchPhotoLoop = async (isInitial = false) => {
-    // Pause animations before starting fetch
-    setAnimationsPaused(true);
-
-    // Clear any existing animation
-    if (animatingCard) {
-      setAnimatingCard(null);
-      setShowText(false);
-    }
-
     if (isInitial) {
       setInitialLoading(true);
     } else {
@@ -113,18 +109,13 @@ export default function AnimatedCardsPage() {
           updatedData = updatedData.slice(excess);
         }
 
-        // Critical: Re-assign proper IDs after data manipulation
         updatedData = updatedData.map((item, index) => ({
           ...item,
-          id: index, // Ensure correct index assignment
+          id: index,
         }));
 
-        // Remove 'isNew' flag after animation
-        setTimeout(() => {
-          setData((prev) => prev.map((item) => ({ ...item, isNew: false })));
-        }, 2000);
-
-        return updatedData;
+        setPendingData(updatedData);
+        return prevData;
       });
 
       setTimeUntilFetch(FETCH_INTERVAL_MS);
@@ -145,13 +136,26 @@ export default function AnimatedCardsPage() {
           // Resume animations after background fetch
           setTimeout(() => {
             setAnimationsPaused(false);
-            // Reset to beginning of sequence when data updates
-            setCurrentCardIndex(0);
           }, 500); // Small delay to ensure refs are updated
         }, 1000);
       }
     }
   };
+
+  useEffect(() => {
+    if (pendingData && !isAnimating) {
+      setData(pendingData);
+      setPendingData(null);
+
+      // Adjust currentCardIndex if it's out of bounds with new data
+      setCurrentCardIndex((prev) => {
+        if (prev >= pendingData.length) {
+          return prev % pendingData.length; // Wrap around if index is too high
+        }
+        return prev; // Keep current index if it's still valid
+      });
+    }
+  }, [pendingData, isAnimating]);
 
   useEffect(() => {
     fetchPhotoLoop(true);
@@ -182,7 +186,7 @@ export default function AnimatedCardsPage() {
   // Modified function to select cards in order
   const selectNextCard = () => {
     // Don't run animations if paused, no data, or already animating
-    if (animationsPaused || animatingCard || !data.length) return;
+    if (animationsPaused || isAnimating || !data.length) return;
 
     const cardElement = cardRefs.current[currentCardIndex];
 
@@ -198,6 +202,7 @@ export default function AnimatedCardsPage() {
         side,
         gridIndex,
       });
+      setIsAnimating(true);
 
       // Move to next card, loop back to 0 when reaching the end
       setCurrentCardIndex((prev) => (prev + 1) % data.length);
@@ -206,6 +211,7 @@ export default function AnimatedCardsPage() {
       setTimeout(() => setShowText(false), 2700);
       setTimeout(() => {
         setAnimatingCard(null);
+        setIsAnimating(false);
       }, 3500);
     }
   };
